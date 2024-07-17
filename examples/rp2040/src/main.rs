@@ -18,7 +18,7 @@ use sdspi::{sd_init, SdSpi};
 use static_cell::StaticCell;
 use {defmt_rtt as _, panic_probe as _};
 
-static SPI_BUS: StaticCell<Mutex<CriticalSectionRawMutex, Spi<'static, SPI0, Async>>> =
+static SPI_BUS: StaticCell<Mutex<CriticalSectionRawMutex, Spi<'static, SPI1, Async>>> =
     StaticCell::new();
 
 #[embassy_executor::main]
@@ -26,17 +26,17 @@ async fn main(_spawner: Spawner) {
     let p = embassy_rp::init(Default::default());
     defmt::info!("Hello World!");
 
-    let miso = p.PIN_16;
-    let mosi = p.PIN_7;
-    let clk = p.PIN_6;
-    let cs = Output::new(p.PIN_5, Level::High);
+    let sck = p.PIN_10;
+    let mosi = p.PIN_11;
+    let miso = p.PIN_12;
+    let cs = Output::new(p.PIN_13, Level::High);
 
     let mut config = Config::default();
     config.frequency = 400_000;
 
     let mut spi = Spi::new(
-        p.SPI0,
-        clk,
+        p.SPI1,
+        sck,
         mosi,
         miso,
         p.DMA_CH0,
