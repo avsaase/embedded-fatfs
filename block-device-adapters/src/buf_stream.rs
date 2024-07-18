@@ -581,7 +581,9 @@ mod tests {
 
         block.seek(SeekFrom::Start(0)).await.unwrap();
         let mut tmp = [0u8; 256];
-        block.read(&mut tmp[..]).await.unwrap();
+        embedded_io_async::Read::read(&mut block, &mut tmp[..])
+            .await
+            .unwrap();
 
         assert_eq!(&tmp[..], "A".repeat(256).into_bytes().as_slice());
 
