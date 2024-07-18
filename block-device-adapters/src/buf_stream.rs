@@ -275,13 +275,11 @@ impl<T: BlockDevice<SIZE>, const SIZE: usize> NorFlash for BufStream<T, SIZE> {
             .await
             .unwrap();
 
-        let bytes_to_erase = (to - from) as usize;
-        if bytes_to_erase <= SIZE {
-            embedded_io_async::Write::write(self, &[0xFF; SIZE][..bytes_to_erase])
+        // Since this uses the cache I think this is not horribly slow
+        for _ in from..to {
+            embedded_io_async::Write::write(self, &[0xFF])
                 .await
                 .unwrap();
-        } else {
-            todo!("Implement erase of more than SIZE bytes")
         }
 
         Ok(())
