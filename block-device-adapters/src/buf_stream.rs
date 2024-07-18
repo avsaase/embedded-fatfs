@@ -1,6 +1,7 @@
 use aligned::Aligned;
 use block_device_driver::{slice_to_blocks, slice_to_blocks_mut, BlockDevice};
 use embedded_io_async::{ErrorKind, Read, Seek, SeekFrom, Write};
+use embedded_storage_async::nor_flash::{NorFlash, NorFlashError, NorFlashErrorKind, ReadNorFlash};
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
@@ -231,6 +232,69 @@ impl<T: BlockDevice<SIZE>, const SIZE: usize> Seek for BufStream<T, SIZE> {
             SeekFrom::Current(x) => (self.current_offset as i64 + x) as u64,
         };
         Ok(self.current_offset)
+    }
+}
+
+impl<T: BlockDevice<SIZE> + core::fmt::Debug, const SIZE: usize>
+    embedded_storage_async::nor_flash::ErrorType for BufStream<T, SIZE>
+{
+    type Error = BufStreamError<T>;
+}
+
+impl<T: core::fmt::Debug> NorFlashError for BufStreamError<T> {
+    fn kind(&self) -> NorFlashErrorKind {
+        match self {
+            BufStreamError::Io(_) => NorFlashErrorKind::Other,
+        }
+    }
+}
+
+impl<T: BlockDevice<SIZE> + core::fmt::Debug, const SIZE: usize> ReadNorFlash
+    for BufStream<T, SIZE>
+{
+    const READ_SIZE: usize = 1;
+
+    async fn read(&mut self, offset: u32, bytes: &mut [u8]) -> Result<(), Self::Error> {
+        embedded_io_async::Seek::seek(self, SeekFrom::Start(offset as u64))
+            .await
+            .unwrap();
+        embedded_io_async::Read::read(self, bytes).await.unwrap();
+        Ok(())
+    }
+
+    fn capacity(&self) -> usize {
+        todo!()
+    }
+}
+
+impl<T: BlockDevice<SIZE> + core::fmt::Debug, const SIZE: usize> NorFlash for BufStream<T, SIZE> {
+    const WRITE_SIZE: usize = 1;
+
+    const ERASE_SIZE: usize = SIZE;
+
+    async fn erase(&mut self, from: u32, to: u32) -> Result<(), Self::Error> {
+        embedded_io_async::Seek::seek(self, SeekFrom::Start(from as u64))
+            .await
+            .unwrap();
+
+        let bytes_to_erase = (to - from) as usize;
+        if bytes_to_erase <= SIZE {
+            embedded_io_async::Write::write(self, &[0xFF; SIZE][..bytes_to_erase])
+                .await
+                .unwrap();
+        } else {
+            todo!("Implement erase of more than SIZE bytes")
+        }
+
+        Ok(())
+    }
+
+    async fn write(&mut self, offset: u32, bytes: &[u8]) -> Result<(), Self::Error> {
+        embedded_io_async::Seek::seek(self, SeekFrom::Start(offset as u64))
+            .await
+            .unwrap();
+        embedded_io_async::Write::write(self, bytes).await.unwrap();
+        Ok(())
     }
 }
 
