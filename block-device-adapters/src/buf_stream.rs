@@ -235,10 +235,10 @@ impl<T: BlockDevice<SIZE>, const SIZE: usize> Seek for BufStream<T, SIZE> {
     }
 }
 
-impl<T: BlockDevice<SIZE> + core::fmt::Debug, const SIZE: usize>
-    embedded_storage_async::nor_flash::ErrorType for BufStream<T, SIZE>
+impl<T: BlockDevice<SIZE>, const SIZE: usize> embedded_storage_async::nor_flash::ErrorType
+    for BufStream<T, SIZE>
 {
-    type Error = BufStreamError<T>;
+    type Error = BufStreamError<T::Error>;
 }
 
 impl<T: core::fmt::Debug> NorFlashError for BufStreamError<T> {
@@ -249,9 +249,7 @@ impl<T: core::fmt::Debug> NorFlashError for BufStreamError<T> {
     }
 }
 
-impl<T: BlockDevice<SIZE> + core::fmt::Debug, const SIZE: usize> ReadNorFlash
-    for BufStream<T, SIZE>
-{
+impl<T: BlockDevice<SIZE>, const SIZE: usize> ReadNorFlash for BufStream<T, SIZE> {
     const READ_SIZE: usize = 1;
 
     async fn read(&mut self, offset: u32, bytes: &mut [u8]) -> Result<(), Self::Error> {
@@ -267,7 +265,7 @@ impl<T: BlockDevice<SIZE> + core::fmt::Debug, const SIZE: usize> ReadNorFlash
     }
 }
 
-impl<T: BlockDevice<SIZE> + core::fmt::Debug, const SIZE: usize> NorFlash for BufStream<T, SIZE> {
+impl<T: BlockDevice<SIZE>, const SIZE: usize> NorFlash for BufStream<T, SIZE> {
     const WRITE_SIZE: usize = 1;
 
     const ERASE_SIZE: usize = SIZE;
