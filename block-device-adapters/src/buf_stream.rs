@@ -253,10 +253,8 @@ impl<T: BlockDevice<SIZE>, const SIZE: usize> ReadNorFlash for BufStream<T, SIZE
     const READ_SIZE: usize = 1;
 
     async fn read(&mut self, offset: u32, bytes: &mut [u8]) -> Result<(), Self::Error> {
-        embedded_io_async::Seek::seek(self, SeekFrom::Start(offset as u64))
-            .await
-            .unwrap();
-        embedded_io_async::Read::read(self, bytes).await.unwrap();
+        embedded_io_async::Seek::seek(self, SeekFrom::Start(offset as u64)).await?;
+        embedded_io_async::Read::read(self, bytes).await?;
         Ok(())
     }
 
@@ -271,25 +269,19 @@ impl<T: BlockDevice<SIZE>, const SIZE: usize> NorFlash for BufStream<T, SIZE> {
     const ERASE_SIZE: usize = SIZE;
 
     async fn erase(&mut self, from: u32, to: u32) -> Result<(), Self::Error> {
-        embedded_io_async::Seek::seek(self, SeekFrom::Start(from as u64))
-            .await
-            .unwrap();
+        embedded_io_async::Seek::seek(self, SeekFrom::Start(from as u64)).await?;
 
         // Since this uses the cache I think this is not horribly slow
         for _ in from..to {
-            embedded_io_async::Write::write(self, &[0xFF])
-                .await
-                .unwrap();
+            embedded_io_async::Write::write(self, &[0xFF]).await?;
         }
 
         Ok(())
     }
 
     async fn write(&mut self, offset: u32, bytes: &[u8]) -> Result<(), Self::Error> {
-        embedded_io_async::Seek::seek(self, SeekFrom::Start(offset as u64))
-            .await
-            .unwrap();
-        embedded_io_async::Write::write(self, bytes).await.unwrap();
+        embedded_io_async::Seek::seek(self, SeekFrom::Start(offset as u64)).await?;
+        embedded_io_async::Write::write(self, bytes).await?;
         Ok(())
     }
 }
