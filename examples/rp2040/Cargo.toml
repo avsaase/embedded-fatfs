@@ -27,7 +27,7 @@ sdspi = { version = "0.1.0", path = "../../sdspi", features = ["defmt"] }
 aligned = "0.4.2"
 block-device-adapters = { version = "0.1.0", path = "../../block-device-adapters" }
 embedded-fatfs = { version = "0.1.0", path = "../../embedded-fatfs", default-features = false, features = ["defmt", "lfn"] }
-
+sequential-storage = "3.0.0"
 
 [patch.crates-io]
 # we can remove this once embassy #2732 is released: https://github.com/embassy-rs/embassy/pull/2732
