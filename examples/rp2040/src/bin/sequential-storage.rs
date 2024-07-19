@@ -1,5 +1,6 @@
 #![no_std]
 #![no_main]
+#![feature(impl_trait_in_assoc_type)]
 
 use core::ops::Range;
 
@@ -85,14 +86,14 @@ async fn main(_spawner: Spawner) {
 
     let mut inner = BufStream::<_, 512>::new(sd);
 
-    const ADDRESS_RANGE: Range<u32> = 0..10_240;
+    const ADDRESS_RANGE: Range<u32> = 0..16_777_216;
     const PAGE_COUNT: usize = (ADDRESS_RANGE.end - ADDRESS_RANGE.start) as usize / 512;
     let mut cache = PageStateCache::<PAGE_COUNT>::new();
     let mut data_buffer = [0u8; 128];
 
-    info!("Erasing flash...");
-    erase_all(&mut inner, ADDRESS_RANGE).await.unwrap();
-    info!("Flash erased");
+    // info!("Erasing flash...");
+    // erase_all(&mut inner, ADDRESS_RANGE).await.unwrap();
+    // info!("Flash erased");
 
     info!("Storing 500 items...");
     for x in 0..500u32 {
@@ -118,6 +119,8 @@ async fn main(_spawner: Spawner) {
         assert_eq!(item, Some(x));
     }
     info!("Items retrieved");
+
+    info!("Done");
 
     loop {
         wfe();
