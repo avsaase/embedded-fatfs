@@ -270,10 +270,8 @@ impl<T: BlockDevice<SIZE>, const SIZE: usize> NorFlash for BufStream<T, SIZE> {
 
     async fn erase(&mut self, from: u32, to: u32) -> Result<(), Self::Error> {
         embedded_io_async::Seek::seek(self, SeekFrom::Start(from as u64)).await?;
-
-        // Since this uses the cache I think this is not horribly slow
-        for _ in from..to {
-            embedded_io_async::Write::write(self, &[0xFF]).await?;
+        for _ in (from..to).step_by(SIZE) {
+            embedded_io_async::Write::write(self, &[0xFF; SIZE]).await?;
         }
 
         Ok(())
