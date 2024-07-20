@@ -28,7 +28,7 @@ aligned = "0.4.2"
 block-device-adapters = { version = "0.1.0", path = "../../block-device-adapters" }
 embedded-fatfs = { version = "0.1.0", path = "../../embedded-fatfs", default-features = false, features = ["defmt", "lfn"] }
 sequential-storage = "3.0.0"
-ekv = { git = "https://github.com/embassy-rs/ekv" }
+ekv = { git = "https://github.com/embassy-rs/ekv", features = ["max-page-count-65536", "max-chunk-size-512", "page-size-4096"] }
 embedded-storage-async = "0.4.1"
 
 [patch.crates-io]

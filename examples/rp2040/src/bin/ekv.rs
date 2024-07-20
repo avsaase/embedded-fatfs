@@ -6,6 +6,7 @@ use block_device_adapters::BufStream;
 use cortex_m::asm::wfe;
 use defmt::info;
 use ekv::{
+    config,
     flash::{self, PageID},
     Database,
 };
@@ -33,21 +34,22 @@ const BLOCK_SIZE: usize = 512;
 
 struct DbFlash<T> {
     flash: T,
-    buffer: [u8; BLOCK_SIZE],
+    buffer: [u8; config::PAGE_SIZE],
 }
 
 impl<T: NorFlash + ReadNorFlash> flash::Flash for DbFlash<T> {
     type Error = T::Error;
 
     fn page_count(&self) -> usize {
-        16_777_216 / BLOCK_SIZE // 16MiB
+        // config::MAX_PAGE_COUNT - 1
+        4096
     }
 
     async fn erase(&mut self, page_id: PageID) -> Result<(), <DbFlash<T> as flash::Flash>::Error> {
         self.flash
             .erase(
-                (page_id.index() * BLOCK_SIZE) as u32,
-                (page_id.index() * BLOCK_SIZE + BLOCK_SIZE) as u32,
+                (page_id.index() * config::PAGE_SIZE) as u32,
+                (page_id.index() * config::PAGE_SIZE + config::PAGE_SIZE) as u32,
             )
             .await
     }
@@ -58,7 +60,7 @@ impl<T: NorFlash + ReadNorFlash> flash::Flash for DbFlash<T> {
         offset: usize,
         data: &mut [u8],
     ) -> Result<(), <DbFlash<T> as flash::Flash>::Error> {
-        let address = page_id.index() * BLOCK_SIZE + offset;
+        let address = page_id.index() * config::PAGE_SIZE + offset;
         self.flash
             .read(address as u32, &mut self.buffer[..data.len()])
             .await?;
@@ -72,7 +74,7 @@ impl<T: NorFlash + ReadNorFlash> flash::Flash for DbFlash<T> {
         offset: usize,
         data: &[u8],
     ) -> Result<(), <DbFlash<T> as flash::Flash>::Error> {
-        let address = page_id.index() * BLOCK_SIZE + offset;
+        let address = page_id.index() * config::PAGE_SIZE + offset;
         self.buffer[..data.len()].copy_from_slice(data);
         self.flash
             .write(address as u32, &self.buffer[..data.len()])
@@ -128,7 +130,7 @@ async fn main(_spawner: Spawner) {
             let mut config = Config::default();
             config.frequency = 25_000_000;
             sd.spi().set_config(config);
-            defmt::info!("Initialization complete!");
+            defmt::info!("SD card initialization complete!");
 
             break;
         }
@@ -140,28 +142,30 @@ async fn main(_spawner: Spawner) {
 
     let flash = DbFlash {
         flash: inner,
-        buffer: [0u8; BLOCK_SIZE],
+        buffer: [0u8; config::PAGE_SIZE],
     };
 
     let db = Database::<_, NoopRawMutex>::new(flash, ekv::Config::default());
 
+    info!("Mounting ekv...");
     if db.mount().await.is_err() {
         info!("Formatting...");
         db.format().await.unwrap();
     }
+    info!("Mounted ekv");
 
-    info!("Storing 5000 items...");
-    for x in 0..5000u32 {
-        let mut wtx = db.write_transaction().await;
+    info!("Storing items...");
+    let mut wtx = db.write_transaction().await;
+    for x in 0..500u32 {
         let bytes = x.to_be_bytes();
         wtx.write(&bytes, &bytes).await.unwrap();
-        wtx.commit().await.unwrap();
     }
+    wtx.commit().await.unwrap();
     info!("Items stored");
 
     let mut buf = [0u8; 128];
-    info!("Retrieving 5000 items...");
-    for x in 0..5000u32 {
+    info!("Retrieving items...");
+    for x in 0..500u32 {
         let rtx = db.read_transaction().await;
         let item = rtx
             .read(&x.to_be_bytes(), &mut buf)
